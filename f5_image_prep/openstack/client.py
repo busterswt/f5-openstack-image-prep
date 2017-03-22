@@ -14,10 +14,11 @@
 #
 
 import re
-
-import glanceclient.v1.client as gclient
-import keystoneclient.v2_0.client as ksclient
-
+import json
+import glanceclient as gclient
+from keystoneclient.v3 import client
+from keystoneclient.auth.identity import v3
+from keystoneclient import session as session
 
 class AuthURLNotSet(KeyError):
     pass
@@ -25,31 +26,43 @@ class AuthURLNotSet(KeyError):
 
 def get_keystone_client(creds):
     """Create keystone client."""
-    return ksclient.Client(username=creds.username,
-                           password=creds.password,
-                           tenant_name=creds.tenant_name,
-                           auth_url=creds.auth_url)
+    auth = v3.Password(username=creds.username,
+                       password=creds.password,
+                       project_name=creds.tenant_name,
+                       project_id=creds.project_id,
+                       auth_url=creds.auth_url,
+                       project_domain_name=creds.project_domain_name,
+                       user_domain_name=creds.user_domain_name)
+    sess = session.Session(auth=auth,verify=False)
 
-
-def _strip_version(endpoint):
-    """Strip version from the last component of endpoint if present."""
-    if endpoint.endswith('/'):
-        endpoint = endpoint[:-1]
-    url_bits = endpoint.split('/')
-    if re.match(r'v\d+\.?\d*', url_bits[-1]):
-        endpoint = '/'.join(url_bits[:-1])
-    return endpoint
-
+    return creds.auth_url,sess
 
 def get_glance_client(creds):
     """Create glance client"""
-    keystone_client = get_keystone_client(creds)
-    # If you don't strip the version, the v1 client lists will
-    # try to use /v2/v1/images which is wrong
-    glance_endpoint = _strip_version(
-        keystone_client.service_catalog.url_for(
-            service_type='image',
-            endpoint_type='publicURL'
-        )
-    )
-    return gclient.Client(glance_endpoint, token=keystone_client.auth_token)
+    auth_url,sess = get_keystone_client(creds)
+
+    path = '%s/auth/catalog' % auth_url
+    resp = sess.get(path,
+                    authenticated=True,
+                    endpoint_filter={'service_type': 'identity',
+                                     'interface': 'public',
+                                     'region_name': 'RegionOne'})
+
+    catalog = json.loads(resp.text)
+    glance_endpoint = get_endpoint_url('image',catalog)
+
+    authDict = sess.auth.__dict__
+    myToken = authDict["auth_ref"]["auth_token"]
+
+    return gclient.Client('1', endpoint=glance_endpoint, token=myToken, insecure=True)
+
+def get_endpoint_url(type,catalog):
+    try:
+        for service in catalog["catalog"]:
+	    # Find the matching service in catalog
+            if service['type'] == type:
+                for endpoint in service["endpoints"]:
+                    if endpoint['interface'] == 'public':
+                        return endpoint['url']
+    except:
+        raise Exception("Unable to determine endpoint URL!")
