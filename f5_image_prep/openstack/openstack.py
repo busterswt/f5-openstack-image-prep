@@ -19,12 +19,15 @@ import os
 
 class OpenStackCreds(object):
     """OpenStack Credentials"""
-    def __init__(self, auth_url, tenant_name, username, password):
+    def __init__(self, auth_url, tenant_name, username, password, project_id, project_domain_name, user_domain_name, region_name):
         self.auth_url = auth_url
         self.tenant_name = tenant_name
         self.username = username
         self.password = password
-
+        self.project_id = project_id
+        self.user_domain_name = user_domain_name
+        self.project_domain_name = project_domain_name
+        self.region_name = region_name
 
 class OpenStackLib(object):
     """OpenStack Library"""
@@ -49,6 +52,10 @@ def get_creds():
     os_username = None
     os_password = None
     os_auth_url = None
+    os_project_id = None
+    os_project_domain_name = None
+    os_region_name = None
+    os_user_domain_name = None
 
     # Start with environment variables
     try:
@@ -71,9 +78,33 @@ def get_creds():
     except KeyError:
         pass
 
+    try:
+        os_project_id = os.environ['OS_PROJECT_ID']
+    except KeyError:
+        pass
+
+    try:
+        os_project_domain_name = os.environ['OS_PROJECT_DOMAIN_NAME']
+    except KeyError:
+        pass
+
+    try:
+        os_user_domain_name = os.environ['OS_USER_DOMAIN_NAME']
+    except KeyError:
+        pass
+
+    try:
+        os_region_name = os.environ['OS_REGION_NAME']
+    except KeyError:
+        pass
+
     creds = OpenStackCreds(
         os_auth_url,
         os_tenant_name,
         os_username,
-        os_password)
+        os_password,
+        os_project_id,
+        os_project_domain_name,
+        os_user_domain_name,
+        os_region_name)
     return creds
