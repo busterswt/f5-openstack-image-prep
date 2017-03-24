@@ -344,10 +344,10 @@ function get_user_data() {
     fi
 
     # Next, look for user data from the OpenStack metadata service
-    get_metadata_service_userdata
-    if [[ $? == 0 ]]; then
-	return 0
-    fi
+#    get_metadata_service_userdata
+#    if [[ $? == 0 ]]; then
+#	return 0
+#    fi
 
     return 1
 }
