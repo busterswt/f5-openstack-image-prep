@@ -23,6 +23,7 @@ OS_USER_DATA_LOCAL_FILE="/config/user-data.json"
 OS_USER_DATA_RETRIES=20
 OS_USER_DATA_RETRY_INTERVAL=10
 OS_USER_DATA_RETRY_MAX_TIME=300
+OS_META_DATA_TIMEOUT=5
 
 OS_USER_DATA_CLEANUP=true
 OS_META_DATA_CLEANUP=true
@@ -112,10 +113,11 @@ function test_metadata_service() {
     local retries=${OS_USER_DATA_RETRIES}
     local url=$1
     local retval=1
+    local maxtime=${OS_META_DATA_TIMEOUT}
 
     while (( retries > 0 ))
     do
-	response_code=$(curl -s --head --output /dev/null -w "%{http_code}\n" $url)
+	response_code=$(curl --max-time $maxtime -s --head --output /dev/null -w "%{http_code}\n" $url)
 	if [[ ${response_code} == "200" ]]; then
 	    retval=0
 	    break;
@@ -344,10 +346,10 @@ function get_user_data() {
     fi
 
     # Next, look for user data from the OpenStack metadata service
-#    get_metadata_service_userdata
-#    if [[ $? == 0 ]]; then
-#	return 0
-#    fi
+    get_metadata_service_userdata
+    if [[ $? == 0 ]]; then
+	return 0
+    fi
 
     return 1
 }
