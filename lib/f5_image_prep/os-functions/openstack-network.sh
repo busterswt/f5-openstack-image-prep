@@ -183,12 +183,14 @@ function set_tmm_if_vlan() {
 	[[ $(is_false ${vlan_description}) ]] && vlan_description=$OS_VLAN_DESCRIPTION
 	[[ $(is_false ${mtu}) ]] && mtu=$OS_VLAN_MTU
 
-	if [[ ${tagged} == true && tagged_cmd="{ tagged } " ]]; then
+	if [[ ${tagged} == true ]]; then
 	    if [[ ${vlan_tag} -ge 1 && ${vlan_tag} -le 4096 ]]; then
 		vlan_tag_cmd=" tag $vlan_tag "
+                tagged_cmd="{ tagged } "
 		log "Configuring VLAN $vlan_name with tag $vlan_tag on interface $tmm_if..."
 	    fi
 	else
+            tagged_cmd="{ } "
 	    log "Configuring VLAN $vlan_name on interface $tmm_if..."
 	fi
 
